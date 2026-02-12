@@ -15,7 +15,7 @@ class VariableElimination():
         """
         self.network = network
 
-    def run(self, query, observed_cpts, elim_order, factor_product_function):
+    def run(self, query, observed_cpts, elim_order, product_formula):
         """
         Use the variable elimination algorithm to find out the probability
         distribution of the query variable given the observed variables
@@ -52,7 +52,7 @@ class VariableElimination():
             new_factor = combined.groupby(keep, as_index=False)['prob'].sum()
             
             observed_cpts = factors_without_element + [new_factor]
-            factor_product_function = [[var for var in vars_ if var != element] for vars_ in factor_product_function]
+            product_formula = [[var for var in vars_ if var != element] for vars_ in product_formula]
 
         #Sum out remaining vectors containing query variable
         cpt_query = combined.groupby(query, as_index=False)['prob'].sum()

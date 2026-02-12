@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
     print(minimum_factor_size(product_formula, evidence))
     # Call the variable elimination function for the queried node given the evidence and the elimination ordering as follows:   
-    result = ve.run(query, evidence, minimum_factor_size(product_formula, evidence))
+    result = ve.run(query, updated_cpts, minimum_factor_size(product_formula, evidence), product_formula)
     print("-"*200)
     print(f"CPT of variable {query}"); 
     if evidence: print(f'given evidence {evidence}:')
