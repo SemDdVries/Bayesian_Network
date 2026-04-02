@@ -32,6 +32,9 @@ if __name__ == '__main__':
     # The evidence is represented in the following way (can also be empty when there is no evidence): 
     evidence = {'Burglary': 'True'}
 
+    #MAP variables
+    map_variables = ['JohnCalls', 'Earthquake']
+
     # Remove variables opposite of those observed (observed 'Burglary': True, so we remove 'Burglary': False)
     cpts = [df for df in net.probabilities.values()]
     updated_cpts = []
@@ -39,26 +42,23 @@ if __name__ == '__main__':
         for key, value in evidence.items():
             if key in df.columns:
                 df = df[df[key]==value]
-                updated_cpts.append(df)
-            else:
-                updated_cpts.append(df)
-
-    #Retrieve product formula:
-    product_formula = [list(df.columns[df.columns != 'prob']) for df in updated_cpts]
+        updated_cpts.append(df)
 
     # Determine your elimination ordering before you call the run function. The elimination ordering   
     # is either specified by a list or a heuristic function that determines the elimination ordering
     # given the network. Experimentation with different heuristics will earn bonus points. The elimination
     # ordering can for example be set as follows:
     def minimum_factor_size(factor, evidence=set()):
+        if evidence is None:
+            return {}
+        product_formula = [list(df.columns[df.columns != 'prob']) for df in factor]
         elim_order = []
-        factor_copy = factor.copy()
-        variables = {var for factor in factor_copy for var in factor} - set(evidence.keys()) #All variables - evidence variable(s)
+        variables = {var for factor in product_formula for var in factor} - set(evidence.keys()) #All variables - evidence variable(s)
 
         while variables:
             sizes = {}
             for var in variables:
-                involved = [set(factor) for factor in factor_copy if var in factor]
+                involved = [set(factor) for factor in product_formula if var in factor]
                 union_involved = set().union(*involved) #Concatenate all variables in involved into one set, removing duplicates and returning 1 single set.
                 sizes[var] = 2**len(union_involved) #2^k for boolean operations. 
 
@@ -68,10 +68,20 @@ if __name__ == '__main__':
 
         return elim_order
 
-    print(minimum_factor_size(product_formula, evidence))
-    # Call the variable elimination function for the queried node given the evidence and the elimination ordering as follows:   
-    result = ve.run(query, updated_cpts, minimum_factor_size(product_formula, evidence), product_formula)
-    print("-"*200)
-    print(f"CPT of variable {query}"); 
-    if evidence: print(f'given evidence {evidence}:')
-    print(result)
+    # Call the variable elimination function for the queried node given the evidence and the elimination ordering as follows:
+    with open("variable_elimination.log", "w") as log_file:   
+        result_ve = ve.run(query, updated_cpts, minimum_factor_size(updated_cpts, evidence), evidence, log=log_file) #Set to None if no logging is wanted
+    print(f"Result for query variable(s) {query} with evidence {evidence} and elimination order {minimum_factor_size(updated_cpts, evidence)}:")
+    print(result_ve)
+
+    #Exclude MAP variables from evidence
+    exclude = dict(evidence)
+    for element in map_variables:
+        exclude[element] = ""
+    elim_order_map = minimum_factor_size(updated_cpts, exclude)
+
+    #Call Variable Elimination with MAP variables algorithm:
+    with open("map.log", "w") as log_file:
+        result_map = ve.run_with_map(map_variables, updated_cpts, elim_order_map, evidence, log=log_file)
+    print(f"Result for MAP variable(s) {map_variables} with evidence {evidence} and elimination order {elim_order_map}:")
+    print(result_map)
