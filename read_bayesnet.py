@@ -16,20 +16,22 @@ class BayesNet():
     Uses pandas DataFrames for representing conditional probability tables
     """
 
-    # Possible values per variable
-    values = {}
-
-    # Probability distributions per variable
-    probabilities = {}
-
-    # Parents per variable
-    parents = {}
+    
 
     def __init__(self, filename):
         """
         Construct a bayesian network from a .bif file
 
         """
+        # Possible values per variable
+        self.values = {}
+
+        # Probability distributions per variable
+        self.probabilities = {}
+
+        # Parents per variable
+        self.parents = {}
+
         with open(filename, 'r') as file:
             line_number = 0
             for line in file:

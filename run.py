@@ -7,6 +7,8 @@ Code to read in Bayesian Networks has been provided. We assume you have installe
 """
 from read_bayesnet import BayesNet
 from variable_elim import VariableElimination
+from em_algorithm import EMAlgorithm, load_data
+import copy
 
 if __name__ == '__main__':
     # The class BayesNet represents a Bayesian network from a .bif file in several variables
@@ -68,11 +70,17 @@ if __name__ == '__main__':
 
         return elim_order
 
+    #####################################################################################################################
+    #Variable Elimination:
+
     # Call the variable elimination function for the queried node given the evidence and the elimination ordering as follows:
     with open("variable_elimination.log", "w") as log_file:   
         result_ve = ve.run(query, updated_cpts, minimum_factor_size(updated_cpts, evidence), evidence, log=log_file) #Set to None if no logging is wanted
     print(f"Result for query variable(s) {query} with evidence {evidence} and elimination order {minimum_factor_size(updated_cpts, evidence)}:")
     print(result_ve)
+
+    #####################################################################################################################
+    #MAP:
 
     #Exclude MAP variables from evidence
     exclude = dict(evidence)
@@ -85,3 +93,25 @@ if __name__ == '__main__':
         result_map = ve.run_with_map(map_variables, updated_cpts, elim_order_map, evidence, log=log_file)
     print(f"Result for MAP variable(s) {map_variables} with evidence {evidence} and elimination order {elim_order_map}:")
     print(result_map)
+
+    #####################################################################################################################
+    #EM learning algorithm:
+    net_original = BayesNet('endorisk_new.bif')
+    data = load_data('simulation_data_hid_names.dat', net_original)
+
+    best_network = None
+    best_loglikelihood = float('-inf')
+
+    for i in range(5):
+        net_copy = copy.deepcopy(net_original)
+        with open(f'em_run_{i+1}.log', 'w') as log_file:
+            em = EMAlgorithm(net_copy, data, log=log_file)
+            learned, loglikelihood = em.run(max_iter=50)
+        print(f"Run {i+1}: final log-likelihood = {loglikelihood:.4f}")
+        if loglikelihood > best_loglikelihood:
+            best_loglikelihood = loglikelihood
+            best_network = learned
+
+    #Display best log-likelihood:
+    print(f"Best log-likelihood = {best_loglikelihood:.4f}")
+    #####################################################################################################################
