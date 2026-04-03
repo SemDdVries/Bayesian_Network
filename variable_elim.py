@@ -91,7 +91,8 @@ class VariableElimination():
         #Marginalize
         sum_rows = cpt_query['prob'].sum()
         cpt_query['prob'] /= sum_rows
-        write(f"Final result: {[col for col in cpt_query.columns if col != 'prob']}")
+        write(f"Final result for query variable {query}:")
+        write(f"{cpt_query}")
         write("=" * 60)
         return cpt_query
 

@@ -1,12 +1,8 @@
-Nodes: ['Burglary', 'Earthquake', 'Alarm', 'JohnCalls', 'MaryCalls']
-Values: {'Burglary': ['True', 'False'], 'Earthquake': ['True', 'False'], 'Alarm': ['True', 'False'], 'JohnCalls': ['True', 'False'], 'MaryCalls': ['True', 'False']}
-Parents: {'Burglary': [], 'Earthquake': [], 'Alarm': ['Burglary', 'Earthquake'], 'JohnCalls': ['Alarm'], 'MaryCalls': ['Alarm']}
-============================================================
-VARIABLE ELIMINATION
-============================================================
+VARIABLE ELIMINATION LOG FILE:
+
 Query variable: Alarm
-Evidence: {'Burglary': 'True'}
 Elimination order: ['MaryCalls', 'JohnCalls', 'Earthquake', 'Alarm']
+Evidence: {'Burglary': 'True'}
 Initial factors:
   f0: ['Burglary']
   f1: ['Earthquake']
@@ -14,24 +10,20 @@ Initial factors:
   f3: ['JohnCalls', 'Alarm']
   f4: ['MaryCalls', 'Alarm']
 ------------------------------------------------------------
-Eliminating 'MaryCalls':
-  Multiplying factor over ['MaryCalls', 'Alarm']
-  Combined factor columns: ['MaryCalls', 'Alarm']
-  After summing out 'MaryCalls': ['Alarm']
-Eliminating 'JohnCalls':
-  Multiplying factor over ['JohnCalls', 'Alarm']
-  Combined factor columns: ['JohnCalls', 'Alarm']
-  After summing out 'JohnCalls': ['Alarm']
-Eliminating 'Earthquake':
-  Multiplying factor over ['Earthquake']
-  Multiplying factor over ['Alarm', 'Burglary', 'Earthquake']
-  Combined factor columns: ['Earthquake', 'Alarm', 'Burglary']
-  After summing out 'Earthquake': ['Alarm', 'Burglary']
-------------------------------------------------------------
-Elimination complete. Remaining factors: 4
-Final (normalized) distribution for 'Alarm':
 
-Alarm   prob
-False 0.0598
- True 0.9402
+Eliminating MaryCalls
+
+After summing out MaryCalls: ['Alarm']
+
+Eliminating JohnCalls
+
+After summing out JohnCalls: ['Alarm']
+
+Eliminating Earthquake
+
+After summing out Earthquake: ['Alarm', 'Burglary']
+Final result for query variable Alarm:
+   Alarm    prob
+0  False  0.0598
+1   True  0.9402
 ============================================================

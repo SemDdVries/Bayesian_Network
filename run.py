@@ -98,6 +98,7 @@ if __name__ == '__main__':
     #EM learning algorithm:
     net_original = BayesNet('endorisk_new.bif')
     data = load_data('simulation_data_hid_names.dat', net_original)
+    data = data.head(1000)
 
     best_network = None
     best_loglikelihood = float('-inf')

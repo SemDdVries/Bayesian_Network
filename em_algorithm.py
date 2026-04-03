@@ -69,17 +69,23 @@ class EMAlgorithm:
             print(msg, file=self.log)
 
     #Helper functions:
+    def _build_cpt_dicts(self):
+        """Convert pd.DataFrame to dict of dicts for faster lookup"""
+        self.cpt_dicts = {}
+        for var in self.network.nodes:
+            parents = self.network.parents[var]
+            cpt = self.network.probabilities[var]
+            lookup_dict = {}
+            for _, row in cpt.iterrows():
+                key = tuple(row[v] for v in [var] + parents)
+                lookup_dict[key] = float(row['prob'])
+            self.cpt_dicts[var] = lookup_dict
+
     def _lookup_prob(self, var, assignment):
         """Look up P(var=val | parents=parent_vals) from the current CPTs."""
-        cpt = self.network.probabilities[var]
         parents = self.network.parents[var]
-        mask = (cpt[var] == assignment[var])
-        for p in parents:
-            mask &= (cpt[p] == assignment[p])
-        result = cpt.loc[mask, 'prob']
-        if len(result) == 0:
-            return 0.0
-        return float(result.iloc[0])
+        key = tuple(assignment[v] for v in [var] + parents)
+        return self.cpt_dicts[var].get(key, 0.0)
 
     def _joint_probability(self, assignment):
         """Compute P(x1,...,xn), so the product of all CPT lookups."""
@@ -93,44 +99,36 @@ class EMAlgorithm:
     def _add_counts(self, expected_counts, assignment, weight):
         for var in self.network.nodes:
             parents = self.network.parents[var]
-            all_vars = [var] + parents
-            counts = expected_counts[var]
-            mask = pd.Series([True] * len(counts))
-            for v in all_vars:
-                mask &= (counts[v] == assignment[v])
-            expected_counts[var].loc[mask, 'count'] += weight
+            key = tuple(assignment[v] for v in [var] + parents)
+            expected_counts[var][key] += weight
 
     #EM Algorithm:
     def e_step(self):
+
+        self._build_cpt_dicts()
+
         #Initialize empty counts for each variable's CPT
         expected_counts = {}
-
         for var in self.network.nodes:
             parents = self.network.parents[var]
             all_vars = [var] + parents
             all_values = [self.network.values[v] for v in all_vars]
-            combos = list(iter_product(*all_values))
-            rows = [list(combo) + [0.0] for combo in combos]
-            expected_counts[var] = pd.DataFrame(rows, columns=all_vars + ['count'])
-
-        loglikelihood = 0.0 
+            expected_counts[var] = {combo: 0.0 for combo in iter_product(*all_values)}
+        loglikelihood = 0.0
         #Find which variables are hidden (empty in every row)
         hidden_vars = [col for col in self.network.nodes
                     if (self.data[col] == '').all()]
         hidden_combos = list(iter_product(*[self.network.values[h] for h in hidden_vars]))
-
         #Loop over every row
         for idx, row in self.data.iterrows():
             observed = {col: row[col] for col in self.data.columns
                         if col in self.network.nodes and row[col] != ''}
             if not hidden_vars:
-                #Complete row --> count directly:
                 prob = self._joint_probability(observed)
                 if prob > 0:
                     loglikelihood += math.log(prob)
                 self._add_counts(expected_counts, observed, 1.0)
             else:
-                #Incomplete row -->  compute P(hidden | observed) for each combo:
                 probs = []
                 assignments = []
                 for combo in hidden_combos:
@@ -146,7 +144,15 @@ class EMAlgorithm:
                     probs = [p / total for p in probs]
                 for assignment, prob in zip(assignments, probs):
                     self._add_counts(expected_counts, assignment, prob)
-        return expected_counts, loglikelihood
+
+        #Convert dict counts back to DataFrames for m_step
+        df_counts = {}
+        for var in self.network.nodes:
+            parents = self.network.parents[var]
+            all_vars = [var] + parents
+            rows = [list(key) + [count] for key, count in expected_counts[var].items()]
+            df_counts[var] = pd.DataFrame(rows, columns=all_vars + ['count'])
+        return df_counts, loglikelihood
 
     def m_step(self, expected_counts, smoothing=1):
         for var in self.network.nodes:
@@ -167,7 +173,7 @@ class EMAlgorithm:
                 counts['prob'] = (counts['count'] + smoothing) / (total + smoothing * n_vals)
                 self.network.probabilities[var] = counts[[var, 'prob']].copy()
 
-    def run(self, max_iter=50, least_change=1e-4, smoothing=1):
+    def run(self, max_iter=5, least_change=1e-3, smoothing=1):
         self.write("=" * 60)
         self.write("EXPECTATION-MAXIMIZATION ALGORITHM")
         self.write(f"Data: {len(self.data)} rows, {len(self.data.columns)} columns")
